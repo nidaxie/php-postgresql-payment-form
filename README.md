@@ -32,6 +32,7 @@ CREATE TABLE kullanici (
     aciklama TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
 CREATE TABLE pos_bilgileri (
     id SERIAL PRIMARY KEY,
     pos_adi VARCHAR(100) NOT NULL,
@@ -39,6 +40,7 @@ CREATE TABLE pos_bilgileri (
     komisyon NUMERIC(5,2) NOT NULL,
     aktif BOOLEAN DEFAULT TRUE
 );
+
 CREATE TABLE tahsilatlar (
     id SERIAL PRIMARY KEY,
     kullanici_id INT NOT NULL,
