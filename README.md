@@ -56,6 +56,7 @@ CONSTRAINT fk_pos
         FOREIGN KEY (pos_bilgileri_id)
         REFERENCES pos_bilgileri(id)
 );
+
 INSERT INTO pos_bilgileri (pos_adi, taksit, komisyon) VALUES
 ('Ziraat POS', 1, 0),
 ('Ziraat POS', 2, 2.50),
