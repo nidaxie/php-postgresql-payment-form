@@ -1,72 +1,109 @@
 <?php
-require 'db.php';
-$posStmt=$db->query("SELECT id, pos_adi, taksit, komisyon from pos_bilgileri");
-$poslar = $posStmt->fetchAll(PDO::FETCH_ASSOC);
+    require 'db.php';
+    $poslar = $db->query(" SELECT id, pos_adi, taksit, komisyon FROM pos_bilgileri")->fetchAll(PDO::FETCH_ASSOC);
 ?>
-
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>odeme formu</title>
+<meta charset="UTF-8">
+<title>Ödeme Formu</title>
+<style>
+    body{font-family:Arial;padding:20px}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{border:1px solid #ddd;padding:8px}
+    th{background:#f2f2f2}
+</style>
 </head>
 <body>
-    <form action="kaydet.php" method="POST">
-        <h3>Kullanici Bilgileri</h3>
-            <input type="text" name="isim" placeholder="İsim" required>
-            <input type="email" name="email" placeholder="Email" required>
-            <input type="text" name="tcno" placeholder="TC No" required>
-            <input type="text" name="telno" placeholder="Tel No" required>
-            <textarea name="aciklama" placeholder="Açıklama"></textarea>
-        <br><br>
+    <form method="POST" action="kaydet.php">
+        <h3>Kullanıcı Bilgileri</h3>
+        <input name="isim" placeholder="İsim" required  pattern="[A-Za-zÇçĞğİıÖöŞşÜü\s]+">
+        <input name="email" type="email" placeholder="Email" required>
+        <input name="tcno" placeholder="TC No" required  inputmode="numeric" pattern="[0-9]{11}" maxlength="11">
+        <input name="telno" placeholder="Telefon" required pattern="[0-9]{10,11}" maxlength="11">
+        <textarea name="aciklama" placeholder="Açıklama"></textarea>
 
         <h3>Kart Bilgileri</h3>
-            <input type="text" name="kart_no" placeholder="Kart Numarası" maxlength="16" required>
-            <input type="text" name="cvv" placeholder="CVV" maxlength="3" required>
-            <input type="text" name="son_kullanim_ay" placeholder="AA" maxlength="2"pattern="[0-9]{2}"required>
-            <input type="text" name="son_kullanim_yil" placeholder="YYYY" maxlength="4"pattern="[0-9]{2}"required>
-        <br><br>
+        <input name="kart_sahibi" placeholder="kart sahibi" required  pattern="[A-Za-zÇçĞğİıÖöŞşÜü\s]+">
+        <input name="kart_no" placeholder="Kart Numarası" maxlength="16" required inputmode="numeric" pattern="[0-9]{16}" oninput="binKontrol(this.value)">
+        <input name="cvv" placeholder="CVV" maxlength="3"  inputmode="numeric" pattern="[0-9]{3}" required>
+        <input name="ay" placeholder="AA" maxlength="2" required pattern="^(0[1-9]|1[0-2])$">
+        <input name="yil" placeholder="YYYY" maxlength="4" required pattern="[0-9]{4}">
 
-        <h3>Ödeme ve Taksit Seçimi</h3>
-            <label>Tutar</label>
-            <label>Ödenecek Tutar (₺):</label>
-            <input type="number" id="ana_tutar" name="tutar" step="0.01" required oninput="hesapla()">
-            <table>
-                <tr>
-                    <th>Seç</th>
-                    <th>POS Adı</th>
-                    <th>Taksit</th>
-                    <th>Komisyon (%)</th>
-                    <th>Toplam Ödeme</th>
+        <h3>Tutar</h3>
+        <input type="number" id="tutar" name="tutar" step="0.01" required oninput="hesapla()">
+
+        <table>
+            <tr>
+                <th>Seç</th><th>POS</th><th>Taksit</th><th>Komisyon</th><th>Toplam</th>
+            </tr>
+
+            <?php foreach($poslar as $p): ?>
+                <tr class="pos" data-banka="<?= $p['pos_adi'] ?>" data-taksit="<?= $p['taksit'] ?>">
+                    <td><input type="radio" name="pos_bilgileri_id" value="<?= $p['id'] ?>"></td>
+                    <td><?= $p['pos_adi'] ?></td>
+                    <td><?= $p['taksit']==1?'Tek Çekim':$p['taksit'].' Taksit' ?></td>
+                    <td>%<?= $p['komisyon'] ?></td>
+                    <td class="toplam" data-komisyon="<?= $p['komisyon'] ?>">0.00 ₺</td>
                 </tr>
-                <?php foreach($poslar as $pos): ?>
-                <tr>
-                    <td><input type="radio" name="pos_bilgileri_id" value="<?= $pos['id'] ?>" required></td>
-                    <td><?= $pos['pos_adi'] ?></td>
-                    <td><?= $pos['taksit'] ?></td>
-                    <td>%<?= $pos['komisyon'] ?></td>
-                    <td class="toplam-alan" data-komisyon="<?= $pos['komisyon'] ?>">0.00 ₺</td>
-                </tr>
-                <?php endforeach; ?>
-            </table>
-            <br>
-            <button type="submit">Ödeme Yap</button>
+            <?php endforeach; ?>
+        </table>
+        <br>
+        <button>Ödeme Yap</button>
     </form>
 
-        <script>
-        function hesapla() {
-            let tutar = document.getElementById('ana_tutar').value;
-            let alanlar = document.querySelectorAll('.toplam-alan');
-            
-            alanlar.forEach(alan => {
-                let komisyon = alan.getAttribute('data-komisyon');
-                let toplam = parseFloat(tutar) + (tutar * komisyon / 100);
-                alan.innerHTML = isNaN(toplam) ? "0.00 ₺" : toplam.toFixed(2) + " ₺";
+    <script>
+        const satirlar = document.querySelectorAll('.pos');
+
+        const binListesi = {
+            "123456":"Ziraat Bankası",
+            "234567":"Garanti BBVA",
+            "345678":"İş Bankası",
+            "456789":"Akbank"
+        };
+
+        function hesapla(){
+            const tutar = parseFloat(document.getElementById('tutar').value) || 0;
+            document.querySelectorAll('.toplam').forEach(td=>{
+                const k = td.dataset.komisyon;
+                td.innerText = (tutar + tutar*k/100).toFixed(2) + " ₺";
             });
         }
-        </script>
-    
 
+        function binKontrol(no){
+            no = no.replace(/\D/g,'');
+            if(no.length < 6){
+                tabloyuSifirla();
+                return;
+            }
+
+            const banka = binListesi[no.substring(0,6)] || null;
+            banka ? bankaModu(banka) : tekCekimModu();
+        }
+
+        function bankaModu(banka){
+            satirlar.forEach(s=>{
+                const goster =
+                    s.dataset.banka === banka || Number(s.dataset.taksit) === 1;
+
+                s.style.display = goster ? 'table-row' : 'none';
+                if(!goster) s.querySelector('input').checked = false;
+            });
+        }
+
+        function tekCekimModu(){
+            satirlar.forEach(s=>{
+                const goster = Number(s.dataset.taksit) === 1;
+                s.style.display = goster ? 'table-row' : 'none';
+                if(!goster) s.querySelector('input').checked = false;
+            });
+        }
+
+        function tabloyuSifirla(){
+            satirlar.forEach(s=>{
+                s.style.display = 'table-row';
+            });
+        }
+    </script>
 </body>
 </html>
